@@ -61,11 +61,6 @@ def convert_csv_to_parquet(csv_file_path, parquet_file_path):
     table = pv.read_csv(csv_file_path)
     pq.write_table(table, parquet_file_path)
 
-def load_csv(connection, csv_file_path, table_name):
-        df = pandas.read_csv(csv_file_path)
-        df.to_sql(name=table_name, con=connection, if_exists='append', index=False, method='multi')
-        print(f"Data from '{csv_file_path}' loaded successfully into '{table_name}'.")
-
 def load_parquet(connection, parquet_file_path, table_name):
         df = pandas.read_parquet(parquet_file_path)  
         df.to_sql(name=table_name, con=connection, if_exists='append', index=False, method='multi')
