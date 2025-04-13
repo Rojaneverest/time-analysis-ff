@@ -78,7 +78,7 @@ def load_parquet(connection, parquet_file_path, table_name):
         df = pandas.read_parquet(parquet_file_path, engine='fastparquet')
         read_end_time = time.time()
         read_time = read_end_time - read_start_time
-        print(f"[fastparquet] Time needed to read: {read_time} seconds")
+        print(f"Time needed to read with fastparquet: {read_time} seconds")
         
         '''
         write_start_time=time.time()
@@ -88,12 +88,22 @@ def load_parquet(connection, parquet_file_path, table_name):
         print(f"Time needed to write: {write_time}")
         '''
 
+def visualize_parquet_schema(parquet_file_path):
+    try:
+        parquet_file = pq.ParquetFile(parquet_file_path)
+        schema = str(parquet_file.schema)
+        print(f"Schema of '{parquet_file_path}':")
+        print(schema)
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        
 try:
     with engine.begin() as connection: 
         parquet_table_name = "titanic_from_parquet"
         if not check_exists(connection, parquet_table_name):
             create_parquet_table(connection)
         load_parquet(connection, parquet_file_path, parquet_table_name)
+        visualize_parquet_schema(parquet_file_path)
 
 except Exception as e:
     print(f"Error: {e}")

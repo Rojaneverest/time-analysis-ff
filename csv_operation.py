@@ -56,12 +56,14 @@ def load_csv(connection, csv_file_path,table_name):
             read_time=read_end_time-read_start_time
             print(f"Time to read csv file: {read_time}")
             
+            '''
             write_start_time=time.time()
             df.to_sql(name=table_name, con=connection, if_exists='append', index=False, method='multi',chunksize=10000)
             write_end_time=time.time()
             write_time=write_end_time-write_start_time
             print(f"Time to write csv file: {write_time}")
             print(f"Data from '{csv_file_path}' loaded successfully into '{table_name}'.")
+            '''
     except FileNotFoundError:
             print(f"Error: CSV file not found at '{csv_file_path}'.")
     except Exception as e:
