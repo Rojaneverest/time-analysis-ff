@@ -4,12 +4,12 @@ from sqlalchemy import create_engine, text
 import pyarrow.csv as pv
 import pyarrow.parquet as pq
 import os
-import pandas
+import pandas, time
 
 load_dotenv()
 
-csv_file_path = 'tested.csv'
-parquet_file_path = 'tested.parquet' 
+csv_file_path = 'files/tested_verylarge.csv'
+parquet_file_path = 'files/tested_verylarge.parquet' 
 
 dbname = os.getenv("dbname")
 host = os.getenv("host")
@@ -57,13 +57,36 @@ def create_parquet_table(connection):
     connection.execute(query)
 
 
-def convert_csv_to_parquet(csv_file_path, parquet_file_path):
-    table = pv.read_csv(csv_file_path)
-    pq.write_table(table, parquet_file_path)
-
 def load_parquet(connection, parquet_file_path, table_name):
+        read_start_time= time.time()
+        
+        # Read with pandas default engine
         df = pandas.read_parquet(parquet_file_path)  
-        df.to_sql(name=table_name, con=connection, if_exists='append', index=False, method='multi')
+        read_end_time=time.time()
+        read_time= read_end_time-read_start_time
+        print(f"Time needed to read with default engine: {read_time}")
+        
+        # Read with pyarrow
+        read_start_time = time.time()
+        table = pq.read_table(parquet_file_path)
+        read_end_time = time.time()
+        read_time = read_end_time - read_start_time
+        print(f"Time needed to read with pyarrow: {read_time}")
+        
+        # Read with fastparquet engine with pandas
+        read_start_time = time.time()
+        df = pandas.read_parquet(parquet_file_path, engine='fastparquet')
+        read_end_time = time.time()
+        read_time = read_end_time - read_start_time
+        print(f"[fastparquet] Time needed to read: {read_time} seconds")
+        
+        '''
+        write_start_time=time.time()
+        df.to_sql(name=table_name, con=connection, if_exists='append', index=False, method='multi', chunksize=10000)
+        write_end_time=time.time()
+        write_time=write_end_time-write_start_time
+        print(f"Time needed to write: {write_time}")
+        '''
 
 try:
     with engine.begin() as connection: 
