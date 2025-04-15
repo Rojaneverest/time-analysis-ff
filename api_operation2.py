@@ -82,7 +82,9 @@ def load_to_postgres(data, table_name):
     try: 
         conn=get_db_connection()
         cursor=conn.cursor()
-        if data()
+        if data(): 
+            for record in data: 
+                
         
 
         

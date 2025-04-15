@@ -4,11 +4,20 @@ import psycopg2
 import pandas as pd
 from sqlalchemy import create_engine
 import os
+import numpy as np
 
 API_URL = "https://rickandmortyapi.com/api/character"  
 TABLE_NAME = "rick_and_morty_characters"
 TRANSFORMED_TABLE_NAME = "transformed_characters"
 OUTPUT_CSV_FILENAME = "files/transformed_characters.csv"
+
+DB_CONFIG = {
+    "host": "localhost",
+    "database": "rick_and_morty",
+    "user": "postgres",
+    "password": "root",
+    "port": 5432
+}
 
 def get_db_connection():
     try:
@@ -75,7 +84,10 @@ def fetch_api_data(api_url):
     try:
         response = requests.get(api_url)
         response.raise_for_status()
-        return response.json().get('results')
+        data= response.json().get('results')
+        with open("files/rick_morty_json.json", "w") as json_file:
+            json.dump(data, json_file, indent=4)
+        return data
     except requests.exceptions.RequestException as e:
         print(f"Error fetching data: {e}")
         return None
@@ -92,9 +104,8 @@ def load_to_postgres(data, table_name):
                 
                 columns = ", ".join(record.keys())
                 placeholders = ", ".join(["%s"] * len(record))
-                sql = f"INSERT INTO {table_name} ({columns}) VALUES ({placeholders}) ON CONFLICT (id) DO NOTHING" # Assuming 'id' is a unique key
+                sql = f"INSERT INTO {table_name} ({columns}) VALUES ({placeholders})" 
                 values = list(record.values())
-                print(f"Printing values: {values}")
                 try:
                     cursor.execute(sql, values)
                 except psycopg2.Error as e:
@@ -122,7 +133,7 @@ def transform_data_pandas( table_name):
         df['episode_count'] = df['episode'].apply(len)
         df.drop(columns=['origin', 'location', 'url', 'episode'], inplace=True)
         df['created'] = pd.to_datetime(df['created'])
-
+        df['type'].replace('', "null", inplace=True)
         print("\nTransformed DataFrame:")
         print(df.head())
         return df
@@ -133,28 +144,15 @@ def transform_data_pandas( table_name):
         if conn:
             conn.close()
 
-def load_transformed_to_postgres(df, table_name):
+def load_transformed_to_postgres(df, db_config, table_name):
     if df is not None:
+        engine = create_engine(f"postgresql://{db_config['user']}:{db_config['password']}@{db_config['host']}:{5432}/{db_config['database']}")
         try:
-            conn = get_db_connection()
-            cursor = conn.cursor()
-
-            columns = ", ".join(df.columns)
-            placeholders = ", ".join(["%s"] * len(df.columns))
-            sql = f"INSERT INTO {table_name} ({columns}) VALUES ({placeholders}) ON CONFLICT (id) DO NOTHING"
-
-            for _, row in df.iterrows():
-                cursor.execute(sql, tuple(row))
-
-            conn.commit()
+            df.to_sql(table_name, engine, if_exists='replace', index=False)
             print(f"\nTransformed data loaded into '{table_name}' in PostgreSQL.")
-        except psycopg2.Error as e:
+        except Exception as e:
             print(f"Error loading transformed data to PostgreSQL: {e}")
-        finally:
-            if cursor:
-                cursor.close()
-            if conn:
-                conn.close()
+
                 
 def export_to_csv(df, filename):
     if df is not None:
@@ -171,5 +169,5 @@ if __name__ == "__main__":
         load_to_postgres(api_data, TABLE_NAME)
         transformed_df = transform_data_pandas(TABLE_NAME)
         if transformed_df is not None:
-            load_transformed_to_postgres(transformed_df, TRANSFORMED_TABLE_NAME)
+            load_transformed_to_postgres(transformed_df,DB_CONFIG, TRANSFORMED_TABLE_NAME)
             export_to_csv(transformed_df, OUTPUT_CSV_FILENAME)
