@@ -88,12 +88,38 @@ def load_parquet(connection, parquet_file_path, table_name):
         print(f"Time needed to write: {write_time}")
         '''
 
-def visualize_parquet_schema(parquet_file_path):
+def visualize_parquet(parquet_file_path):
     try:
         parquet_file = pq.ParquetFile(parquet_file_path)
-        schema = str(parquet_file.schema)
-        print(f"Schema of '{parquet_file_path}':")
-        print(schema)
+
+        print(f"Metadata of '{parquet_file_path}':")
+        print("\nSchema:")
+        print(parquet_file.schema)
+
+        print("\nFile-level Metadata:")
+        print(f"  Format Version: {parquet_file.metadata.format_version}")
+        print(f"  Number of Row Groups: {parquet_file.num_row_groups}")
+        print(f"  Number of Rows: {parquet_file.metadata.num_rows}")
+        print(f"  Created by: {parquet_file.metadata.created_by}")
+
+
+        for i in range(parquet_file.num_row_groups):
+            row_group_metadata = parquet_file.metadata.row_group(i)
+            print(f"\nRow Group {i} Metadata:")
+            print(f"  Number of Rows: {row_group_metadata.num_rows}")
+            print(f"  Total Byte Size: {row_group_metadata.total_byte_size}")
+            for j in range(row_group_metadata.num_columns):
+                column_metadata = row_group_metadata.column(j)
+                print(f"  Column '{parquet_file.schema.names[j]}' Metadata:")
+                print(f"    Physical Type: {column_metadata.physical_type}")
+                print(f"    Compression: {column_metadata.compression}")
+                if column_metadata.statistics:
+                    print(f"    Statistics:")
+                    if column_metadata.statistics.has_min_max:
+                        print(f"      Min: {column_metadata.statistics.min}")
+                        print(f"      Max: {column_metadata.statistics.max}")
+                    print(f"      Null Count: {column_metadata.statistics.null_count}")
+
     except Exception as e:
         print(f"An error occurred: {e}")
         
@@ -102,8 +128,8 @@ try:
         parquet_table_name = "titanic_from_parquet"
         if not check_exists(connection, parquet_table_name):
             create_parquet_table(connection)
-        load_parquet(connection, parquet_file_path, parquet_table_name)
-        visualize_parquet_schema(parquet_file_path)
+        #load_parquet(connection, parquet_file_path, parquet_table_name)
+        visualize_parquet(parquet_file_path)
 
 except Exception as e:
     print(f"Error: {e}")
