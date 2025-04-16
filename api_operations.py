@@ -4,7 +4,6 @@ import psycopg2
 import pandas as pd
 from sqlalchemy import create_engine
 import os
-import numpy as np
 
 API_URL = "https://rickandmortyapi.com/api/character"  
 TABLE_NAME = "rick_and_morty_characters"
@@ -127,7 +126,7 @@ def transform_data_pandas( table_name):
         df = pd.read_sql_query(f"SELECT * FROM {table_name}", conn)
         print("\nOriginal DataFrame:")
         print(df.head())
-
+        
         df['origin_name'] = df['origin'].apply(lambda x: x.get('name'))
         df['location_name'] = df['location'].apply(lambda x: x.get('name'))
         df['episode_count'] = df['episode'].apply(len)
